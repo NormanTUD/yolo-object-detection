@@ -9,14 +9,26 @@ import imutils
 import time
 import cv2
 import os
+from pprint import pprint
+import sys
+
+def dier (msg):
+	pprint(msg)
+	sys.exit(0)
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-o", "--output", default=False,
 	help="path to output video")
 ap.add_argument("-c", "--confidence", type=float, default=0.5,
 	help="minimum probability to filter weak detections")
+ap.add_argument("-s", "--blur-size", type=int, default=25,
+	help="Blur pen size")
 ap.add_argument("-t", "--threshold", type=float, default=0.3,
 	help="threshold when applying non-maxima suppression")
+ap.add_argument("-b", "--blur-inside", type=bool, default=False,
+	help="Blur inside detection boxes")
+ap.add_argument("-B", "--blur-outside", type=bool, default=False,
+	help="Blur outside detection boxes")
 args = vars(ap.parse_args())
 
 # load the COCO class labels our YOLO model was trained on
@@ -97,6 +109,31 @@ while True:
 	# ensure at least one detection exists
 	if len(idxs) > 0:
 		# loop over the indexes we are keeping
+		if args["blur_inside"] and args["blur_outside"]:
+			frame = cv2.GaussianBlur(frame, (int(args["blur_size"]), int(args["blur_size"])), 0)
+		elif args["blur_inside"]:
+			for i in idxs.flatten():
+				# extract the bounding box coordinates
+				(x, y) = (boxes[i][0], boxes[i][1])
+				(w, h) = (boxes[i][2], boxes[i][3])
+
+				end_x = x + w
+				end_y = y + h
+
+				blurred = cv2.GaussianBlur(frame, (int(args["blur_size"]), int(args["blur_size"])), 0)
+				frame[y:end_y, x:end_x] = blurred[y:end_y, x:end_x]
+		elif args["blur_outside"]:
+			original_frame = frame
+			frame = cv2.GaussianBlur(frame, (int(args["blur_size"]), int(args["blur_size"])), 0)
+			for i in idxs.flatten():
+				# extract the bounding box coordinates
+				(x, y) = (boxes[i][0], boxes[i][1])
+				(w, h) = (boxes[i][2], boxes[i][3])
+
+				end_x = x + w
+				end_y = y + h
+
+				frame[y:end_y, x:end_x] = original_frame[y:end_y, x:end_x]
 		for i in idxs.flatten():
 			# extract the bounding box coordinates
 			(x, y) = (boxes[i][0], boxes[i][1])
@@ -104,6 +141,7 @@ while True:
 
 			# draw a bounding box rectangle and label on the frame
 			color = [int(c) for c in COLORS[classIDs[i]]]
+
 			cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
 			text = "{}: {:.4f}".format(LABELS[classIDs[i]],
 				confidences[i])
