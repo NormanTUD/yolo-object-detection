@@ -29,7 +29,19 @@ ap.add_argument("-b", "--blur-inside", type=bool, default=False,
 	help="Blur inside detection boxes")
 ap.add_argument("-B", "--blur-outside", type=bool, default=False,
 	help="Blur outside detection boxes")
+ap.add_argument("-l", "--list-blurrable", type=str, default="",
+	help="Comma-seperated list of items that should be blurred/not blurred with --blur-inside/--blur-outside")
 args = vars(ap.parse_args())
+
+def is_blurrable (list_blurrable, item):
+	splitted = list_blurrable.split(',')
+	if len(splitted) == 0:
+		return 1
+	else:
+		for this_item in splitted:
+			if this_item == item:
+				return 1
+	return 0
 
 # load the COCO class labels our YOLO model was trained on
 labelsPath = os.path.sep.join(["yolo-coco", "coco.names"])
@@ -113,27 +125,29 @@ while True:
 			frame = cv2.GaussianBlur(frame, (int(args["blur_size"]), int(args["blur_size"])), 0)
 		elif args["blur_inside"]:
 			for i in idxs.flatten():
-				# extract the bounding box coordinates
-				(x, y) = (boxes[i][0], boxes[i][1])
-				(w, h) = (boxes[i][2], boxes[i][3])
+				if is_blurrable(args["list_blurrable"], LABELS[classIDs[i]]):
+					# extract the bounding box coordinates
+					(x, y) = (boxes[i][0], boxes[i][1])
+					(w, h) = (boxes[i][2], boxes[i][3])
 
-				end_x = x + w
-				end_y = y + h
+					end_x = x + w
+					end_y = y + h
 
-				blurred = cv2.GaussianBlur(frame, (int(args["blur_size"]), int(args["blur_size"])), 0)
-				frame[y:end_y, x:end_x] = blurred[y:end_y, x:end_x]
+					blurred = cv2.GaussianBlur(frame, (int(args["blur_size"]), int(args["blur_size"])), 0)
+					frame[y:end_y, x:end_x] = blurred[y:end_y, x:end_x]
 		elif args["blur_outside"]:
 			original_frame = frame
 			frame = cv2.GaussianBlur(frame, (int(args["blur_size"]), int(args["blur_size"])), 0)
 			for i in idxs.flatten():
-				# extract the bounding box coordinates
-				(x, y) = (boxes[i][0], boxes[i][1])
-				(w, h) = (boxes[i][2], boxes[i][3])
+				if is_blurrable(args["list_blurrable"], LABELS[classIDs[i]]):
+					# extract the bounding box coordinates
+					(x, y) = (boxes[i][0], boxes[i][1])
+					(w, h) = (boxes[i][2], boxes[i][3])
 
-				end_x = x + w
-				end_y = y + h
+					end_x = x + w
+					end_y = y + h
 
-				frame[y:end_y, x:end_x] = original_frame[y:end_y, x:end_x]
+					frame[y:end_y, x:end_x] = original_frame[y:end_y, x:end_x]
 		for i in idxs.flatten():
 			# extract the bounding box coordinates
 			(x, y) = (boxes[i][0], boxes[i][1])
