@@ -1,0 +1,26 @@
+Bootstrap: docker
+From: ubuntu:18.04
+Stage: build
+
+%post
+        export ENV DEBIAN_FRONTEND=noninteractive
+        apt-get update && apt-get install -y netcat python3 python3-pip python3-opencv git wget
+        pip3 install --upgrade pip
+        pip3 install numpy==1.17.5
+        pip3 install imutils==0.5.4 
+        pip3 install opencv-contrib-python==4.5.3.56
+        mkdir /detect/
+        cd /detect/
+        git clone --depth 1 https://github.com/NormanTUD/yolo-object-detection
+        cd yolo-object-detection
+        bash download_model_weights.sh
+
+%labels
+        Author norman.koch@tu-dresden.de
+        Version v1.0.0
+
+%help
+        Live video detection
+
+%runscript
+        python3 /detect/yolo-object-detection/yolo_real_time.py
